@@ -3,3 +3,4 @@ prueba_*
 resumen.txt
 log_*
 server_HTTP.*
+__pycache__*
