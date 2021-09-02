@@ -1,4 +1,5 @@
 prueba_*
 .idea/
 resumen.txt
-log_
+log_*
+server_HTTP.*
