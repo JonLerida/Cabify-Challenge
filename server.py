@@ -2,19 +2,26 @@ import socket
 import threading
 from io import StringIO
 import email
+from string import Template
+
 
 from request import Request
 
-# class HTTPRequest(BaseHTTPRequestHandler):
-#     def __init__(self, request):
-#         self.rfile = BytesIO(request)
-#         self.raw_requestline = self.rfile.readline()
-#         self.error_code = self.error_message = None
-#         self.parse_request()
-#
-#     def send_error(self, code, message):
-#         self.error_code = code
-#         self.error_message = message
+with open('http_response_template.txt.', 'r') as f:
+    generic_http_response = Template(f.read())
+
+
+with open('response_template.html', 'r') as f:
+    generic_html_response = Template(f.read())
+
+
+# TODO move this to a new method | class
+d = {
+    'code': 200,
+    'response': 'Ok',
+    'connection_header': 'Closed',
+    'content_type_header': 'text/html'
+}
 
 
 class Server(object):
@@ -46,12 +53,32 @@ class Server(object):
             self.authentication(conn, addr)
 
     def authentication(self, conn, addr):
+        """
+
+        :param conn:
+        :param addr:
+        :return: None
+        :raises: generic exception
+        """
         try:
             request = Request(conn.recv(2048).decode())
-            # lines = self.parse_request(request)
-            # construct a message from the request string
-            request = email.message_from_file(StringIO(lines))
             print(request)
+
+            if request.method == 'GET':
+                # todo do get
+                generic_http_response_result = generic_http_response.substitute(d)
+                generic_html_response_result = generic_html_response.substitute(d)
+                generic_http_response_result += generic_html_response_result
+                conn.sendall(generic_http_response_result.encode())
+            elif request.method == 'PUT':
+                # todo put
+                pass
+            elif request.method == 'POST':
+                # todo post
+                pass
+            else:
+                # todo either raise and exception or send an error response
+                pass
         except Exception as e:
             print("[EXCEPTION]", e)
             conn.close()
