@@ -1,4 +1,8 @@
 HTTP/1.1 $code $response
+Date: $date_header
+Content-Length: $content_length_header
 Connection: $connection_header
-Content-type: $content_type_header
+Content-Type: $content_type_header
+
+$http_body
 
