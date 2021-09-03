@@ -5,9 +5,10 @@
 
 class Car(object):
     def __init__(self, id, seats):
-        self.id = id
-        self.seats = seats
-        self.travelling = None # todo may not be needed
+        self.id = int(id)
+        self.seats = int(seats)
+
+        self.travelling = False # todo may not be needed
 
 
     def get_id(self):
@@ -17,7 +18,7 @@ class Car(object):
         return self.seats
 
     def __str__(self):
-        return f'Car #{self.id} with {self.seats} total seats'
+        return f'[Car_object] with id {self.id}, seats {self.seats}'
 
     def __repr__(self):
         return str(self)

@@ -12,6 +12,7 @@ class Request(object):
         self.headers = None
         self.first_line = None
         self.arguments = None
+        self.body = None
 
         self.parse_request(self.raw_request)
 
@@ -36,10 +37,20 @@ class Request(object):
     def _parse_headers(self, headers):
         pass
 
+    def _parse_headers_and_body(self, h_a_b):
+        try:
+            headers, body = h_a_b.split('\r\n\r\n', 1)
+        except ValueError: # no body
+            headers = h_a_b
+            body = ''
+
+        return headers, body
+
     def parse_request(self, raw_request):
-        self.first_line, headers = raw_request.split('\r\n', 1)
+        self.first_line, headers_and_body = raw_request.split('\r\n', 1)
 
         self._parse_first_line(self.first_line)
+        headers, self.body = self._parse_headers_and_body(headers_and_body)
         # construct a message from the request string
         message = email.message_from_file(StringIO(headers))
 
