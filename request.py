@@ -1,6 +1,7 @@
 from io import StringIO
 import email
-
+import re
+import exceptions
 class Request(object):
     def __init__(self, raw_request):
         self.raw_request = raw_request
@@ -15,6 +16,20 @@ class Request(object):
         self.body = None
 
         self.parse_request(self.raw_request)
+        if self.get_header_value('Content-Type') == 'application/x-www-form-urlencoded':
+            self._parse_form_body(self.body)
+
+
+    def _parse_form_body(self, body):
+        """
+
+        :param body: str
+        :return:
+        :raises Exception
+        """
+        key, value = body.split('=')
+        if key:
+            self.arguments[key] = value.strip()
 
     def _parse_path(self, path):
         if '?' in path:
@@ -51,6 +66,7 @@ class Request(object):
 
         self._parse_first_line(self.first_line)
         headers, self.body = self._parse_headers_and_body(headers_and_body)
+
         # construct a message from the request string
         message = email.message_from_file(StringIO(headers))
 
@@ -77,4 +93,4 @@ class Request(object):
         :param argument_name: str
         :return: str
         """
-        return self.arguments.get(argument_name, '')
+        return self.arguments[argument_name]

@@ -4,11 +4,11 @@ Stores the group and car ID of every journey
 
 
 class Journey(object):
-    def __init__(self, group, car, id):
+    def __init__(self, group, car, ID):
 
         self.group = group
         self.car = car
-        self.id = id
+        self.ID = ID
 
     def get_group(self):
         """
@@ -29,4 +29,10 @@ class Journey(object):
 
         :return:
         """
-        return self.id
+        return self.ID
+
+    def __str__(self):
+        return f'[Journey object] with id {self.ID}'
+
+    def __repr__(self):
+        return str(self)

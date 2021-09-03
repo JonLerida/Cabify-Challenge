@@ -1,0 +1,2 @@
+class IncorrectForm(Exception):
+    pass

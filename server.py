@@ -4,20 +4,48 @@ from string import Template
 from request import Request
 import json
 import datetime
+import exceptions
+import re
 
 from car import Car
 from group import Group
+from journey import Journey
 # TODO move this to a new method | class
 
 
 class Server(object):
     def __init__(self):
         # TODO create here variables needed (such as lists)
-        self.journey_counter = 0
-        self._reset_cars()  # Creates self.cars = []
-        self.available_cars = []
+        self.journey_counter = 1
+
+        self._reset_cars()  # Creates self.available_cars = []
+        self._reset_jorneys()  # Creates self.journeys = []
+
         self.used_cars = []
+        self.pending_groups = []
         self.groups = []
+        self.served_groups = []
+
+    def _parse_request_arguments(self, request):
+        """
+        Reparse the request arguments to fill the formulary requirements
+
+        :param request: Request
+        :return: int
+        :raises Exception
+        :returns the form ID
+        """
+
+        if len(request.arguments) > 1:
+            raise exceptions.IncorrectForm
+
+        if 'ID' not in request.arguments.keys():
+            raise exceptions.IncorrectForm
+        try:
+            id = int(request.arguments['ID'])
+            return id
+        except ValueError:
+            raise exceptions.IncorrectForm
 
     def connection_handler(self):
         """
@@ -32,7 +60,7 @@ class Server(object):
         try:
             s.bind((server_ip, server_port))
         except socket.error as e:
-            print('[EXCEPTION] ', e)
+            print('[server exception] ', e)
 
         print("[LOG] Server running in port %d" % server_port)
 
@@ -40,16 +68,16 @@ class Server(object):
         s.listen()
         while True:
             conn, addr = s.accept()
-            print("[CONNECT] New connection")
+            # print("\n\n[CONNECT] New connection")
             self.request_handler(conn, addr)
             conn.close()
 
     def request_handler(self, conn, addr):
         """
+        Handless HTTP requests, piping them to concrete method handlers
 
-        :param conn:
-        :param addr:
-        :return: None
+        :param conn: socket
+        :param addr: tuple (ip, port)
         :raises: generic exception
         """
         try:
@@ -58,8 +86,15 @@ class Server(object):
             if not data:
                 print("Empty data received")
                 return
+            try:
+                request = Request(data)
+            except exceptions.IncorrectForm as e:
+                self.send_error_response(conn, code=400, msg='Bad Request')
+                print("[LOG] IncorrectForm")
+                return
 
-            request = Request(data)
+            print('[REQUEST] %s from %s' % (request.first_line, addr))
+
             if request.method == 'GET':
                 self.do_GET(conn, request)
             elif request.method == 'PUT':
@@ -72,27 +107,33 @@ class Server(object):
                 # todo either raise and exception or send an error response
                 self.do_DEFAULT(conn, request)
         except Exception as e:
-            print("[EXCEPTION]", type(e).__name__, e)
+            print("[server exception]", type(e).__name__, e)
             # todo do we wanna actually close the socket?
             conn.close()
 
     @staticmethod
     def _fill_date_header():
+        """
+        Get the current date, time and timezone in a pretty format
+
+        :return: str
+        """
         days_abbr = ['Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat', 'Sun']
-        weekday = datetime.datetime.today().weekday()
+        weekday = days_abbr[datetime.datetime.today().weekday()]
         now = datetime.datetime.now()
         date_info = now.strftime("%d %b %Y %H:%M:%S")
         date_header = '%s, %s GMT+2' % (
             weekday, date_info
         )
-
         return date_header
 
-    def _fill_response(self, body:bool, http_dict, body_dict=None):
+    def _fill_response(self, http_body: bool, http_dict: dict, body_dict: dict = None):
         """
-        hace
+        Fill the HTTP response using some dictionaries.
 
-        :param body: bool
+        Uses the 'http_response_template.txt' file
+
+        :param http_body: bool
         :param http_dict: dict
         :param body_dict: dict
         :return: str
@@ -113,27 +154,31 @@ class Server(object):
         with open('http_response_template.txt.', 'r') as f:
             http_response = Template(f.read())
 
-        if body:
-            with open('response_template.html', 'r') as f:
-                html_string = Template(f.read())
+        if http_body:
+            if d['content_type_header'] == 'text/html':
+                with open('response_template.html', 'r') as f:
+                    html_string = Template(f.read())
 
-            d['html_response'] = html_string.safe_substitute(body_dict)
+                d['http_body'] = html_string.safe_substitute({**d, **body_dict})
+            elif d['content_type_header'] == 'application/json':
+                d['http_body'] = body_dict['json']
         else:
-            d['html_response'] = ''
+            # No body
+            d['http_body'] = ''
 
-        d['content_length_header'] = len(d['html_response'].encode())
+        d['content_length_header'] = len(d['http_body'].encode())
 
         response = http_response.safe_substitute(d)
-
         return response
 
     def do_GET_status(self, conn, request):
         """
-        hace
+        Handless the GET /status requests
+
+        Responses 200 OK when ready to accept new requests
 
         :param conn:
         :param request:
-        :return:
         """
 
         d = {
@@ -141,12 +186,10 @@ class Server(object):
             'response': 'Ok',
             'connection_header': 'Closed',
             'content_type_header': 'text/html',
-            'server_message': "SERVER'S UP"
         }
 
-        response = self._fill_response(body=False, http_dict=d)
+        response = self._fill_response(http_body=False, http_dict=d)
         conn.sendall(response.encode())
-        print("[LOG] GET status resource")
 
     def do_GET_invalid(self, conn, request):
         """
@@ -156,16 +199,7 @@ class Server(object):
         :return:
         """
 
-        d = {
-            'code': 404,
-            'response': 'Not Found',
-            'connection_header': 'Closed',
-            'content_type_header': 'text/html',
-        }
-
-        response = self._fill_response(body=False, http_dict=d)
-        conn.sendall(response.encode())
-        print("[LOG] GET status resource")
+        self.send_error_response(conn, code=404, msg='Not Found')
 
     def do_GET(self, conn, request):
         """
@@ -208,84 +242,184 @@ class Server(object):
         """
 
         if request.get_header_value('Content-Type') != 'application/json':
-            d = {
-                'code': 400,
-                'response': 'Bad Request',
-                'connection_header': 'Closed',
-                'content_type_header': 'text/html',
-            }
-
-            response = self._fill_response(body=False, http_dict=d)
-            conn.sendall(response.encode())
-            print("[LOG] POST journey invalid Content-Type")
+            self.send_error_response(conn, code=400, msg='Bad Request')
+            print("[LOG] invalid Content-Type")
             return
 
         if not request.body:
-            d = {
-                'code': 400,
-                'response': 'Bad Request',
-                'connection_header': 'Closed',
-                'content_type_header': 'text/html',
-            }
-
-            response = self._fill_response(body=False, http_dict=d)
-            conn.sendall(response.encode())
-            print("[LOG] POST journey empty body")
+            self.send_error_response(conn, code=400, msg='Bad Request')
+            print("[LOG] empty body")
             return
         
         try:
             group = json.loads(request.body)
-            self.groups.append(Group(id=group['id'], people=group['people']))
+            if self.get_group(group['id']):
+                print("[LOG] group already exists, ignoring...")
+            else:
+                self.pending_groups.append(Group(ID=group['id'], people=group['people']))
+                print("[LOG] successfully created the group")
             d = {
                 'code': 202,
                 'response': 'Accepted',
                 'connection_header': 'Closed',
-                'content_type_header': 'text/html',
             }
-            print("[LOG] POST journey successfully created the group")
-
-            response = self._fill_response(body=False, http_dict=d)
+            response = self._fill_response(http_body=False, http_dict=d)
             conn.sendall(response.encode())
+            self.check_queues()
 
         except Exception as e:
-            print('[EXCEPTION]', type(e).__name__, e)
-            d = {
-                'code': 400,
-                'response': 'Bad Request',
-                'connection_header': 'Closed',
-                'content_type_header': 'text/html',
-            }
+            print('[server exception]', type(e).__name__, e)
+            self.send_error_response(conn, code=400, msg='Bad Request')
 
-            response = self._fill_response(body=False, http_dict=d)
-            conn.sendall(response.encode())
+    def dropoff(self, group):
+        """
 
+        :param group: Group
+        :return:
+        """
+        journey = self.get_journey(group)
+        if journey:
+            # End the journey
+            self.journeys.remove(journey)
+
+            # Mark the group as 'served'
+            self.served_groups.append(group)
+            group.travelling = False
+
+            # Free the used car
+            self.available_cars.append(journey.car)
+            self.used_cars.remove(journey.car)
+        else:
+            # TODO I'll assume the group wants to be deleted from the waiting queue
+            self.pending_groups.remove(group)
 
     def do_POST_dropoff(self, conn, request):
         """
+        "
         hace
 
         :param conn:
         :param request:
         :return:
         """
-        pass
+        try:
+            group_ID = self._parse_request_arguments(request)
+            group = self.get_group(group_ID)
+            if group:
+                print("EXISTS")
+                self.dropoff(group)
+
+                # Check if new groups can be served now
+                self.check_queues()
+
+                # Response
+                d = {
+                    'code': 204,
+                    'response': 'No content',
+                    'connection_header': 'Closed',
+                    'content_type_header': 'text/html',
+                }
+
+                response = self._fill_response(http_body=False, http_dict=d)
+                conn.sendall(response.encode())
+            else:
+                self.send_error_response(conn, code=404, msg='Not Found')
+
+        except (KeyError, ValueError, exceptions.IncorrectForm):
+            self.send_error_response(conn, code=400, msg='Bad Request')
+
+    def get_group(self, ID):
+        """
+        Returns the group object given the ID. Searchs in both pending and journeys queues
+
+        :param ID: int
+        :return: Group
+        """
+        group = next((g for g in self.pending_groups if g.ID == ID), None)
+
+        if group is None:
+            group = next((j.group for j in self.journeys if j.group.ID == ID), None)
+            
+        return group
+
+    def get_journey(self, group):
+        return next((j for j in self.journeys if j.group == group), None)
+
+
+    def send_2XX(self, conn, code, msg, payload):
+        d = {
+            'code': code,
+            'response': msg,
+            'connection_header': 'Closed',
+            'content_type_header': 'text/html',
+        }
+
+        response = self._fill_response(http_body=False, http_dict=d)
+        conn.sendall(response.encode())
+    def send_error_response(self, conn, code, msg):
+        d = {
+            'code': code,
+            'response': msg,
+            'connection_header': 'Closed',
+            'content_type_header': 'text/html',
+        }
+
+        response = self._fill_response(http_body=False, http_dict=d)
+        conn.sendall(response.encode())
+
+        print("[RESPONSE] %s %s" % (code, msg))
 
     def do_POST_locate(self, conn, request):
         """
         Handles the POST /locate request
 
-        200 Ok if...
+        200 Ok  and car as payload is group is travelling
 
-        404 Not Found if
+        204 No Content if group is waiting
 
-        400 Bad Request if...
+        404 Not Found if group doesn't exist
 
-        204 No Content if...
+        400 Bad Request if other error
 
         :param conn: socket
         :param request: Request
         """
-        pass
+        try:
+            group_ID = int(request.get_argument_value('ID'))
+            group = self.get_group(group_ID)
+            if group:
+                journey = self.get_journey(group)
+                if journey:
+                    # Response
+                    d = {
+                        'code': 200,
+                        'response': 'Ok',
+                        'connection_header': 'Closed',
+                        'content_type_header': 'application/json',
+                    }
+
+                    body_dict = {
+                        'json': journey.car.as_json()
+                    }
+
+                    response = self._fill_response(http_body=True, http_dict=d, body_dict=body_dict)
+                    conn.sendall(response.encode())
+                else:
+                    # Response
+                    d = {
+                        'code': 204,
+                        'response': 'No Content',
+                        'connection_header': 'Closed',
+                        'content_type_header': 'text/html',
+                    }
+
+                    response = self._fill_response(http_body=False, http_dict=d)
+                    conn.sendall(response.encode())
+            else:
+                self.send_error_response(conn, code=404, msg='Not Found')
+
+        except (KeyError, ValueError):
+            self.send_error_response(conn, code=400, msg='Bad Request')
 
     def do_POST_invalid(self, conn, request):
         """
@@ -325,9 +459,9 @@ class Server(object):
             'content_type_header': 'text/html',
         }
 
-        response = self._fill_response(body=False, http_dict=d)
+        response = self._fill_response(http_body=False, http_dict=d)
         conn.sendall(response.encode())
-        print("[LOG] PUT invalid resource")
+        print("[LOG] invalid resource")
 
     def do_PUT_cars(self, conn, request):
         """
@@ -347,9 +481,9 @@ class Server(object):
                 'content_type_header': 'text/html',
             }
 
-            response = self._fill_response(body=False, http_dict=d)
+            response = self._fill_response(http_body=False, http_dict=d)
             conn.sendall(response.encode())
-            print("[LOG] PUT cars invalid Content-Type")
+            print("[LOG] invalid Content-Type")
             return
 
         if not request.body:  # 404
@@ -360,9 +494,9 @@ class Server(object):
                 'content_type_header': 'text/html',
             }
 
-            response = self._fill_response(body=False, http_dict=d)
+            response = self._fill_response(http_body=False, http_dict=d)
             conn.sendall(response.encode())
-            print("[LOG] PUT cars empty body")
+            print("[LOG] empty body")
             return
 
         try:
@@ -370,8 +504,10 @@ class Server(object):
             self._reset_cars()  # Delete previous existing cars
             # todo should i delete the whole file if there's a single error?
             for car in cars_json:
-                car_object = Car(id=car['id'], seats=car['seats'])
-                self.cars.append(car_object)
+                car_object = Car(ID=car['id'], seats=car['seats'])
+                self.available_cars.append(car_object)
+
+            self.check_queues()
 
             d = {
                 'code': 200,
@@ -380,22 +516,12 @@ class Server(object):
                 'content_type_header': 'text/html',
             }
 
-            response = self._fill_response(body=False, http_dict=d)
+            response = self._fill_response(http_body=False, http_dict=d)
             conn.sendall(response.encode())
-            print("[LOG] PUT cars successfully created CARS")
-
-            print(self.cars)
+            # print("[LOG] PUT cars successfully created CARS")
         except Exception as e:
-            print('[EXCEPTION]', type(e).__name__, e)
-            d = {
-                'code': 400,
-                'response': 'Bad Request',
-                'connection_header': 'Closed',
-                'content_type_header': 'text/html',
-            }
-
-            response = self._fill_response(body=False, http_dict=d)
-            conn.sendall(response.encode())
+            print('[server exception]', type(e).__name__, e)
+            self.send_error_response(conn, code=400, msg='Bad Request')
 
     def do_DEFAULT(self, conn, request):
         """
@@ -412,7 +538,7 @@ class Server(object):
             'content_type_header': 'text/html',
         }
 
-        response = self._fill_response(body=False, http_dict=d)
+        response = self._fill_response(http_body=False, http_dict=d)
         conn.sendall(response.encode())
 
     def _reset_cars(self):
@@ -423,7 +549,59 @@ class Server(object):
         and when receiving a successful PUT /cars request
 
         """
-        self.cars = []
+        self.available_cars = []
+
+    def _reset_jorneys(self):
+        """
+        Resets the journeys list.
+
+        This method should be called ONLY at the start of the server
+        and when receiving a successful PUT /cars request
+
+        """
+        self.journeys = []
+
+    def create_new_journey(self, group, car):
+        """
+
+        :param group: Group
+        :param car: Car
+        :return:
+        """
+        # print('[JOURNEY CREATED]', group, car)
+        self.journeys.append(Journey(group=group, car=car, ID=self.journey_counter))
+        self.journey_counter += 1
+
+    def check_queues(self):
+        """
+
+        :return:
+        """
+
+        for group in self.pending_groups:
+            # Available cars with enough empty seats
+            valid_cars = [c for c in self.available_cars if c.seats >= group.people]
+            if valid_cars:
+                # In order to optimize the space...
+                sorted_cars_by_seat = sorted(valid_cars, key=lambda x: x.seats, reverse=False)
+                chosen_car = sorted_cars_by_seat[0]
+                chosen_car.travelling = True
+                group.travelling = True
+                self.available_cars.remove(chosen_car)
+                self.used_cars.append(chosen_car)
+                self.pending_groups.remove(group)
+                self.create_new_journey(group, chosen_car)
+
+        self.print_stats()
+
+    def print_stats(self):
+        print("stats:")
+        print("\tPending groups: %d" % len(self.pending_groups))
+        print("\tAvailable cars: %d"% len(self.available_cars))
+        print("\tUsed cars: %d"% len(self.used_cars))
+        print("\tServed groups: %d"% len(self.served_groups))
+        print("\tActive journeys: %d" % len(self.journeys))
+
 if __name__ == '__main__':
 
     server = Server()
