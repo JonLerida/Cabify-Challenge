@@ -18,7 +18,7 @@ remove_me:
 ## Uncomment the following sections to enable docker, image building and
 ## acceptance
 
-# build:
+ build:
    stage: build
    image: # Add an image to build your service
    artifacts:
