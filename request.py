@@ -1,7 +1,7 @@
 from io import StringIO
 import email
-import re
-import exceptions
+
+
 class Request(object):
     def __init__(self, raw_request):
         self.raw_request = raw_request
@@ -17,6 +17,7 @@ class Request(object):
 
         self.parse_request(self.raw_request)
         if self.get_header_value('Content-Type') == 'application/x-www-form-urlencoded':
+
             self._parse_form_body(self.body)
 
 
@@ -41,7 +42,6 @@ class Request(object):
             self.resource = path.strip()
             self.arguments = {}
 
-
     def _parse_first_line(self, first_line):
         parts = first_line.split(' ')
         self.path = parts[1]
@@ -52,7 +52,8 @@ class Request(object):
     def _parse_headers(self, headers):
         pass
 
-    def _parse_headers_and_body(self, h_a_b):
+    @staticmethod
+    def _parse_headers_and_body(h_a_b):
         try:
             headers, body = h_a_b.split('\r\n\r\n', 1)
         except ValueError: # no body
@@ -62,9 +63,11 @@ class Request(object):
         return headers, body
 
     def parse_request(self, raw_request):
+
         self.first_line, headers_and_body = raw_request.split('\r\n', 1)
 
         self._parse_first_line(self.first_line)
+
         headers, self.body = self._parse_headers_and_body(headers_and_body)
 
         # construct a message from the request string
