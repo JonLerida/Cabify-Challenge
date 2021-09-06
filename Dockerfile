@@ -2,8 +2,10 @@
 FROM python:3.7-alpine3.13
 
 WORKDIR /app
-EXPOSE 60000/tcp
+EXPOSE 9091/tcp
 COPY . .
+COPY ../src .
+COPY ../static .
 CMD ["python3", "-u", "server.py"]
 
 # docker build --tag cabify-python
