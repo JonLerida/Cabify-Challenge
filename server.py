@@ -2,7 +2,7 @@
 Main thread. Server side of the application.
 Jon Lérida García
 """
-
+import os  # todo delete
 import socket
 import threading
 from string import Template
@@ -120,14 +120,15 @@ class Server(object):
 
         d = {v: http_dict.get(v, '') for v in valid_http_keys}
         d['date_header'] = self._fill_date_header()
-
-        with open('http_response_template.txt.', 'r') as f:
-            http_response = Template(f.read())
+        f = open("http_response_template.txt", "r")
+        http_response = Template(f.read())
+        f.close()
 
         if http_body:
             if d['content_type_header'] == 'text/html':
-                with open('response_template.html', 'r') as f:
-                    html_string = Template(f.read())
+                f = open('response_template.html', 'r')
+                html_string = Template(f.read())
+                f.close()
 
                 d['http_body'] = html_string.safe_substitute({**d, **body_dict})
             elif d['content_type_header'] == 'application/json':
@@ -172,7 +173,7 @@ class Server(object):
         New connections are piped to the authentication method
         :return:
         """
-        server_ip = ""
+        server_ip = "0.0.0.0"
         server_port = 60000
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -658,7 +659,7 @@ class Server(object):
         [self.pending_groups.remove(x) for x in assigned_groups]
 
         # todo remove trace
-        verbose = True
+        verbose = False
         if verbose:
             self.print_stats()
 
