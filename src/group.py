@@ -1,5 +1,7 @@
 """
+Group class. Store the ID,# of people and a boolean variable (travelling or not)
 
+author: Jon Lérida García (jon.lerida.garcia@gmail.com)
 """
 
 

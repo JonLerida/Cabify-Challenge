@@ -1,20 +1,27 @@
 """
 Main thread. Server side of the application.
-Jon Lérida García
+Open a socket in 0.0.0.0 addr and wait for connections
+in an infinite loop.
+
+Pipe new requests to the handler, which calls the Request class to parse http messages
+
+Response client side with HTTP messages, based on the request
+
+author: Jon Lérida García (jon.lerida.garcia@gmail.com)
 """
-import os  # todo delete
+
 import socket
 import threading
 from string import Template
-from request import Request
 import json
 import datetime
-import exceptions
 import time
 
+from request import Request
 from car import Car
 from group import Group
 from journey import Journey
+import exceptions
 
 
 class Server(object):
@@ -120,13 +127,13 @@ class Server(object):
 
         d = {v: http_dict.get(v, '') for v in valid_http_keys}
         d['date_header'] = self._fill_date_header()
-        f = open("http_response_template.txt", "r")
+        f = open("../http_response_template.txt", "r")
         http_response = Template(f.read())
         f.close()
 
         if http_body:
             if d['content_type_header'] == 'text/html':
-                f = open('response_template.html', 'r')
+                f = open('../response_template.html', 'r')
                 html_string = Template(f.read())
                 f.close()
 
@@ -182,7 +189,7 @@ class Server(object):
         except socket.error as e:
             print('[server exception] ', e)
 
-        print("[LOG] Server running in port %d" % server_port)
+        print("[LOG] Server running in (%s, %s)" % (server_ip, server_port))
 
         # Backlog argument limites the number of queued requests
         s.listen()
@@ -314,7 +321,7 @@ class Server(object):
                 print("[LOG] group already exists, ignoring...")
             else:
                 self.pending_groups.append(Group(ID=group['id'], people=group['people']))
-                print("[LOG] successfully created the group")
+                # print("[LOG] successfully created the group")
 
             self.send_2xx_response(socket_info, request, code=202, msg='Accepted')
             self.check_queues()
@@ -476,8 +483,6 @@ class Server(object):
             cars_json = json.loads(request.body)
             self._reset_cars()  # Delete previous existing cars
             self._reset_jorneys()  # Delete previous existing journeys
-            print('[LOG] new cars and journey queues')
-            # todo should i delete the whole file if there's a single error?
             for car in cars_json:
                 car_object = Car(ID=car['id'], seats=car['seats'])
                 self.available_cars.append(car_object)

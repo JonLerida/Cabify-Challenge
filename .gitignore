@@ -2,5 +2,5 @@ prueba_*
 .idea/
 resumen.txt
 log_*
-server_HTTP.*
+test_files/server_HTTP.py
 __pycache__*

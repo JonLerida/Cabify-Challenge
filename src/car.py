@@ -1,14 +1,17 @@
 """
+Car class
 
+Store the ID, # of seats and a boolean variable (travelling)
+author: Jon Lérida García (jon.lerida.garcia@gmail.com)
 """
-
 import json
+
+
 class Car(object):
     def __init__(self, ID, seats):
         self.ID = int(ID)
         self.seats = int(seats)
-
-        self.travelling = False # todo may not be needed
+        self.travelling = False
 
     def get_ID(self):
         return self.ID
@@ -24,6 +27,7 @@ class Car(object):
 
     def as_json(self):
         """
+        JSON representation of the instance
 
         :return: str
         """

@@ -1,34 +1,24 @@
 """
-Stores the group and car ID of every journey
+Journey class
+For every journey, store the group, car and ID
+
+author: Jon Lérida García (jon.lerida.garcia@gmail.com)
 """
 
 
 class Journey(object):
     def __init__(self, group, car, ID):
-
         self.group = group
         self.car = car
         self.ID = ID
 
     def get_group(self):
-        """
-
-        :return:
-        """
         return self.group
 
     def get_car(self):
-        """
-
-        :return:
-        """
         return self.car
 
     def get_id(self):
-        """
-
-        :return:
-        """
         return self.ID
 
     def __str__(self):
