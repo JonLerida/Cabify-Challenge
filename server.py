@@ -1,3 +1,8 @@
+"""
+Main thread. Server side of the application.
+Jon Lérida García
+"""
+
 import socket
 import threading
 from string import Template
@@ -22,6 +27,34 @@ class Server(object):
         self.pending_groups = []
         self.served_groups = []
 
+    """
+    Static methods
+    """
+
+    # noinspection PyBroadException
+    @staticmethod
+    def recv_timeout(conn, timeout=1):
+        conn.setblocking(0)
+        total_data = []
+        data = ''
+        begin = time.time()
+        while True:
+            if total_data and time.time() - begin >= timeout:
+                break
+            elif time.time() - begin >= timeout * 2:
+                break
+            try:
+                data = conn.recv(2048)
+                if data:
+                    total_data.append(data)
+                    begin = time.time()
+                else:
+                    time.sleep(0.1)
+
+            except:
+                pass
+        return b''.join(total_data)
+
     @staticmethod
     def _parse_request_arguments(request):
         """
@@ -44,86 +77,6 @@ class Server(object):
         except ValueError:
             raise exceptions.IncorrectForm
 
-    def connection_handler(self):
-        """
-        Creates the socket and listens for new connections.
-        New connections are piped to the authentication method
-        :return:
-        """
-        server_ip = ""
-        server_port = 60000
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        try:
-            s.bind((server_ip, server_port))
-        except socket.error as e:
-            print('[server exception] ', e)
-
-        print("[LOG] Server running in port %d" % server_port)
-
-        # Backlog argument limites the number of queued requests
-        s.listen()
-        while True:
-            conn, addr = s.accept()
-            self.request_handler(conn, addr)
-            # conn.shutdown(socket.SHUT_RDWR)
-            conn.close()
-
-    @staticmethod
-    def recv_timeout(conn, timeout=1):
-        conn.setblocking(0)
-        total_data = []
-        data = ''
-        begin = time.time()
-        while True:
-            if total_data and time.time() - begin >= timeout:
-                break
-            elif time.time() - begin >= timeout*2:
-                break
-            try:
-                data = conn.recv(2048)
-                if data:
-                    total_data.append(data)
-                    begin = time.time()
-                else:
-                    time.sleep(0.1)
-
-            except Exception as e:
-                pass
-        return b''.join(total_data)
-
-    def request_handler(self, conn, addr):
-        """
-        Handless HTTP requests, piping them to concrete method handlers
-
-        :param conn: socket
-        :param addr: tuple (ip, port)
-        :raises: generic exception
-        """
-        try:
-            data = self.recv_timeout(conn, timeout=1).decode()
-            if not data:
-                return
-            request = Request(data)
-
-            print('[REQUEST] %s from %s' % (request.first_line, addr))
-
-            if request.method == 'GET':
-                self.do_GET(conn, request)
-            elif request.method == 'PUT':
-                # todo put
-                self.do_PUT(conn, request)
-            elif request.method == 'POST':
-                # todo post
-                self.do_POST(conn, request)
-            else:
-                # todo either raise and exception or send an error response
-                self.do_DEFAULT(conn, request)
-        except Exception as e:
-            print("[server exception]", type(e).__name__, e)
-            # TODO do we wanna actually close the socket?
-            conn.close()
-
     @staticmethod
     def _fill_date_header():
         """
@@ -139,6 +92,10 @@ class Server(object):
             weekday, date_info
         )
         return date_header
+
+    """
+    Auxiliar methods
+    """
 
     def _fill_response(self, http_body: bool, http_dict: dict, body_dict: dict = None):
         """
@@ -184,338 +141,6 @@ class Server(object):
         response = http_response.safe_substitute(d)
         return response
 
-    ######## GET ########
-    def do_GET(self, conn, request):
-        """
-        bnla bla
-
-        :param conn:
-        :param request:
-        :return:
-        """
-        # todo do get
-        if request.resource == '/status':
-            self.do_GET_status(conn, request)
-        else:
-            self.do_GET_invalid_resource(conn, request)
-
-    def do_GET_status(self, conn, request):
-        """
-        Handless the GET /status requests
-
-        Responses 200 OK when ready to accept new requests
-
-        :param conn:
-        :param request:
-        """
-
-        self.send_2xx_response(conn, code=200, msg='OK')
-
-    def do_GET_invalid_resource(self, conn, request):
-        """
-
-        :param conn:
-        :param request:
-        :return:
-        """
-
-        self.send_4xx_response(conn, code=404, msg='Not Found')
-
-    ####################
-
-    ######## POST ########
-    def do_POST(self, conn, request):
-        """
-        hace...
-
-        :param conn: socket
-        :param request: Request
-        :return: None
-        """
-        if request.resource == '/journey':
-            self.do_POST_journey(conn, request)
-        elif request.resource == '/dropoff':
-            self.do_POST_dropoff(conn, request)
-        elif request.resource == '/locate':
-            self.do_POST_locate(conn, request)
-        else:
-            self.do_POST_invalid_resource(conn, request)
-
-    def do_POST_journey(self, conn, request):
-        """
-        hace
-
-        :param conn:
-        :param request:
-        :return:
-        """
-
-        if request.get_header_value('Content-Type') != 'application/json':
-            self.send_4xx_response(conn, code=400, msg='Bad Request')
-            print("[LOG] invalid Content-Type")
-            return
-
-        if not request.body:
-            self.send_4xx_response(conn, code=400, msg='Bad Request')
-            print("[LOG] empty body")
-            return
-
-        try:
-            group = json.loads(request.body)
-            if self.get_group(group['id']):
-                print("[LOG] group already exists, ignoring...")
-            else:
-                self.pending_groups.append(Group(ID=group['id'], people=group['people']))
-                print("[LOG] successfully created the group")
-
-            self.send_2xx_response(conn, code=202, msg='Accepted')
-            self.check_queues()
-
-        except Exception as e:
-            print('[server exception]', type(e).__name__, e)
-            self.send_4xx_response(conn, code=400, msg='Bad Request')
-
-    def do_POST_dropoff(
-            self,
-            conn: socket.socket,
-            request: Request
-    ):
-        """
-        hace
-
-        :param conn:
-        :param request:
-        :return:
-        """
-        try:
-            group_ID = self._parse_request_arguments(request)
-            group = self.get_group(group_ID)
-            if group:
-                self.dropoff(group)
-
-                # Check if new groups can be served now
-                self.check_queues()
-
-                # Response
-                self.send_2xx_response(conn, code=204, msg='No Content')
-            else:
-                self.send_4xx_response(conn, code=404, msg='Not Found')
-
-        except (KeyError, ValueError, exceptions.IncorrectForm):
-            self.send_4xx_response(conn, code=400, msg='Bad Request')
-
-    def dropoff(self, group: Group):
-        """
-
-        :param group: Group
-        :return:
-        """
-        journey = self.get_journey(group)
-        if journey:
-            # End the journey
-            self.journeys.remove(journey)
-
-            # Mark the group as 'served'
-            self.served_groups.append(group)
-            group.travelling = False
-
-            # Free the used car
-            self.available_cars.append(journey.car)
-            self.used_cars.remove(journey.car)
-        else:
-            # TODO I'll assume the group wants to be deleted from the waiting queue
-            self.pending_groups.remove(group)
-
-    def get_group(self, ID: int):
-        """
-        Returns the group object given the ID. Searchs in both pending and journeys queues
-
-        :param ID: int
-        :return: Group
-        """
-        group = next((g for g in self.pending_groups if g.ID == ID), None)
-
-        if group is None:
-            group = next((j.group for j in self.journeys if j.group.ID == ID), None)
-
-        return group
-
-    def get_journey(self, group: Group):
-        """
-        Search a journey by group
-
-        :param group: Group
-        :return: Journey
-        """
-        return next((j for j in self.journeys if j.group == group), None)
-
-    def send_4xx_response(
-            self,
-            conn: socket.socket,
-            code: int,
-            msg: str,
-    ):
-        """
-        Sends 4xx HTTP responses
-
-        :param conn: socket
-        :param code: int
-        :param msg: str
-        """
-        d = {
-            'code': code,
-            'response': msg,
-            'connection_header': 'Closed',
-            'content_type_header': 'text/html',  # todo delete content-type when not needed
-        }
-
-        response = self._fill_response(http_body=False, http_dict=d)
-        conn.sendall(response.encode())
-        print("[RESPONSE] %s %s" % (code, msg))
-
-    def do_POST_locate(self, conn: socket.socket, request: Request):
-        """
-        Handles the POST /locate request
-
-        200 Ok  and car as payload is group is travelling
-
-        204 No Content if group is waiting
-
-        404 Not Found if group doesn't exist
-
-        400 Bad Request if other error
-
-        :param conn: socket
-        :param request: Request
-        """
-        try:
-            group_ID = int(request.get_argument_value('ID'))
-            group = self.get_group(group_ID)
-            if group:
-                journey = self.get_journey(group)
-                if journey:
-                    body_dict = {
-                        'Content-Type': 'application/json',
-                        'content': journey.car.as_json()
-                    }
-                    self.send_2xx_response(conn, code=200, msg='OK', body_dict=body_dict)
-                else:
-                    # Response
-                    self.send_2xx_response(conn, code=204, msg='No Content')
-            else:
-                self.send_4xx_response(conn, code=404, msg='Not Found')
-
-        except (KeyError, ValueError):
-            self.send_4xx_response(conn, code=400, msg='Bad Request')
-
-    def send_2xx_response(
-            self,
-            conn: socket.socket,
-            code: int,
-            msg: str,
-            body_dict: dict = None,
-    ):
-        """
-        Sends 2xx HTTP responses
-
-        :param conn: socket
-        :param code: int
-        :param msg: str
-        :param body_dict: dict
-        """
-        d = {
-            'code': code,
-            'response': msg,
-            'connection_header': 'Closed',
-        }
-        http_body = False
-        if body_dict:
-            d['content_type_header'] = body_dict['Content-Type']
-            http_body = True
-        response = self._fill_response(http_body=http_body, http_dict=d, body_dict=body_dict)
-        conn.sendall(response.encode())
-        print("[RESPONSE] %s %s" % (code, msg))
-
-    def do_POST_invalid_resource(self, conn: socket.socket, request: Request):
-        """
-        Handles all the POST invaslid resource requests
-
-        :param conn: socket
-        :param request: Request
-        """
-        self.send_4xx_response(conn, code=404, msg='Not Found')
-
-    def do_PUT(self, conn: socket.socket, request: Request):
-        """
-        First handler for PUT requests
-
-        :param conn: socket
-        :param request: Request
-        """
-        if request.resource == '/cars':
-            self.do_PUT_cars(conn, request)
-        else:
-            self.do_PUT_invalid(conn, request)
-
-    def do_PUT_invalid(self, conn: socket.socket, request: Request):
-        """
-        Handles all the invalid PUT requests.json
-
-        Respond a 404 Not Found
-
-        :param conn:
-        :param request:
-        """
-
-        self.send_4xx_response(conn, code=404, msg='Not Found')
-        print("[LOG] invalid resource")
-
-    def do_PUT_cars(self, conn: socket.socket, request: Request):
-        """
-        JSON should come in the body of the request
-
-        :param conn:
-        :param request:
-        :raises Exception
-        :return:
-        """
-
-        if request.get_header_value('Content-Type') != 'application/json':
-            self.send_4xx_response(conn, code=400, msg='Bad Request')
-            print("[LOG] invalid Content-Type")
-            return
-
-        if not request.body:
-            self.send_4xx_response(conn, code=400, msg='Bad Request')
-            print("[LOG] empty body")
-            return
-
-        try:
-            cars_json = json.loads(request.body)
-            self._reset_cars()  # Delete previous existing cars
-            self._reset_jorneys()  # Delete previous existing journeys
-            print('[LOG] new cars and journey queues')
-            # todo should i delete the whole file if there's a single error?
-            for car in cars_json:
-                car_object = Car(ID=car['id'], seats=car['seats'])
-                self.available_cars.append(car_object)
-
-            self.check_queues()
-            self.send_2xx_response(conn, code=200, msg='OK')
-        except Exception as e:
-            print('[server exception]', type(e).__name__, e)
-            self.send_4xx_response(conn, code=400, msg='Bad Request')
-
-    def do_DEFAULT(self, conn: socket.socket, request: Request):
-        """
-        hace
-
-        :param conn:
-        :param request:
-        :return:
-        """
-        self.send_4xx_response(conn, code=400, msg='Bad Request')
-
     def _reset_cars(self):
         """
         Resets the cars list.
@@ -536,6 +161,455 @@ class Server(object):
 
         """
         self.journeys = []
+
+    """
+    Class methods
+    """
+
+    def connection_handler(self):
+        """
+        Creates the socket and listens for new connections.
+        New connections are piped to the authentication method
+        :return:
+        """
+        server_ip = ""
+        server_port = 60000
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        try:
+            s.bind((server_ip, server_port))
+        except socket.error as e:
+            print('[server exception] ', e)
+
+        print("[LOG] Server running in port %d" % server_port)
+
+        # Backlog argument limites the number of queued requests
+        s.listen()
+        while True:
+            conn, addr = s.accept()
+            self.request_handler(conn, addr)
+            # conn.shutdown(socket.SHUT_RDWR)
+            conn.close()
+
+    def request_handler(self, conn, addr):
+        """
+        Handless HTTP requests, piping them to concrete method handlers
+
+        :param conn: socket object
+        :type conn: socket.socket
+        :param addr: str
+        :type addr:str
+        :raises: generic exception
+        """
+        try:
+            data = self.recv_timeout(conn, timeout=1).decode()
+            if not data:
+                return
+            request = Request(data)
+
+            socket_info = (conn, addr)
+            if request.method == 'GET':
+                self.do_GET(socket_info, request)
+            elif request.method == 'PUT':
+                self.do_PUT(socket_info, request)
+            elif request.method == 'POST':
+                self.do_POST(socket_info, request)
+            else:
+                self.do_DEFAULT(socket_info, request)
+        except Exception as e:
+            print("[server exception]", type(e).__name__, e)
+
+    """
+    Do Get
+    """
+    def do_GET(self, socket_info, request):
+        """
+        bnla bla
+
+        :param socket_info:
+        :type socket_info: (socket.socket, str)
+        :param request:
+        :type request: Request
+        :return:
+        """
+        if request.resource == '/status':
+            self.do_GET_status(socket_info, request)
+        else:
+            self.do_GET_invalid_resource(socket_info, request)
+
+    def do_GET_status(self, socket_info, request):
+        """
+        Handless the GET /status requests
+
+        Responses 200 OK when ready to accept new requests
+
+        :param socket_info:
+        :type socket_info: (socket.socket, str)
+        :param request:
+        :type request: Request
+        """
+
+        self.send_2xx_response(socket_info, request, code=200, msg='OK')
+
+    def do_GET_invalid_resource(self, socket_info, request):
+        """
+
+        :param socket_info:
+        :type socket_info: (socket.socket, str)
+        :param request:
+        :type request: Request
+        :return:
+        """
+
+        self.send_4xx_response(socket_info, request, code=404, msg='Not Found')
+
+    """
+    Do Post
+    """
+
+    def do_POST(self, socket_info, request):
+        """
+        hace...
+
+        :param socket_info:
+        :type socket_info: (socket.socket, str)
+        :param request:
+        :type request: Request
+        :return: None
+        """
+        if request.resource == '/journey':
+            self.do_POST_journey(socket_info, request)
+        elif request.resource == '/dropoff':
+            self.do_POST_dropoff(socket_info, request)
+        elif request.resource == '/locate':
+            self.do_POST_locate(socket_info, request)
+        else:
+            self.do_POST_invalid_resource(socket_info, request)
+
+    def do_POST_journey(self, socket_info, request):
+        """
+        hace
+
+        :param socket_info:
+        :type socket_info: (socket.socket, str)
+        :param request:
+        :type request: Request
+        :return:
+        """
+
+        if request.get_header_value('Content-Type') != 'application/json':
+            self.send_4xx_response(socket_info, request, code=400, msg='Bad Request')
+            print("[LOG] invalid Content-Type")
+            return
+
+        if not request.body:
+            self.send_4xx_response(socket_info, request, code=400, msg='Bad Request')
+            print("[LOG] empty body")
+            return
+
+        try:
+            group = json.loads(request.body)
+            if self.get_group(group['id']):
+                print("[LOG] group already exists, ignoring...")
+            else:
+                self.pending_groups.append(Group(ID=group['id'], people=group['people']))
+                print("[LOG] successfully created the group")
+
+            self.send_2xx_response(socket_info, request, code=202, msg='Accepted')
+            self.check_queues()
+
+        except Exception as e:
+            print('[server exception]', type(e).__name__, e)
+            self.send_4xx_response(socket_info, request, code=400, msg='Bad Request')
+
+    def do_POST_invalid_resource(
+            self,
+            socket_info: (socket.socket, str),
+            request: Request
+    ):
+        """
+        Handles all the POST invaslid resource requests
+
+        :param socket_info:
+        :param request:
+        """
+        self.send_4xx_response(socket_info, request, code=404, msg='Not Found')
+
+    def do_POST_locate(self, socket_info, request):
+        """
+        Handles the POST /locate request
+
+        200 Ok  and car as payload is group is travelling
+
+        204 No Content if group is waiting
+
+        404 Not Found if group doesn't exist
+
+        400 Bad Request if other error
+
+        :param socket_info:
+        :type socket_info: (socket.socket, str)
+        :param request:
+        :type request: Request
+        """
+        try:
+            group_ID = int(request.get_argument_value('ID'))
+            group = self.get_group(group_ID)
+            if group:
+                journey = self.get_journey(group)
+                if journey:
+                    body_dict = {
+                        'Content-Type': 'application/json',
+                        'content': journey.car.as_json()
+                    }
+                    self.send_2xx_response(socket_info, request, code=200, msg='OK', body_dict=body_dict)
+                else:
+                    # Response
+                    self.send_2xx_response(socket_info, request, code=204, msg='No Content')
+            else:
+                self.send_4xx_response(socket_info, request, code=404, msg='Not Found')
+
+        except (KeyError, ValueError):
+            self.send_4xx_response(socket_info, request, code=400, msg='Bad Request')
+
+    def do_POST_dropoff(
+            self,
+            socket_info: (socket.socket, str),
+            request: Request
+    ):
+        """
+        hace
+
+        :param socket_info:
+        :type socket_info: (socket.socket, str)
+        :param request:
+        :type request: Request
+        :return:
+        """
+        try:
+            group_ID = self._parse_request_arguments(request)
+            group = self.get_group(group_ID)
+            if group:
+                self.dropoff(group)
+
+                # Check if new groups can be served now
+                self.check_queues()
+
+                # Response
+                self.send_2xx_response(socket_info, request, code=204, msg='No Content')
+            else:
+                self.send_4xx_response(socket_info, request, code=404, msg='Not Found')
+
+        except (KeyError, ValueError, exceptions.IncorrectForm):
+            self.send_4xx_response(socket_info, request, code=400, msg='Bad Request')
+
+    def dropoff(self, group: Group):
+        """
+        Hace
+
+        :param group: Group
+        :return:
+        """
+        journey = self.get_journey(group)
+        if journey:
+            # End the journey
+            self.journeys.remove(journey)
+
+            # Mark the group as 'served'
+            self.served_groups.append(group)
+            group.travelling = False
+
+            # Free the used car
+            self.available_cars.append(journey.car)
+            self.used_cars.remove(journey.car)
+        else:
+            # TODO I'll assume the group wants to be deleted from the waiting queue
+            self.pending_groups.remove(group)
+
+    """
+    Do Put
+    """
+
+    def do_PUT(
+            self,
+            socket_info: (socket.socket, str),
+            request: Request
+    ):
+        """
+        First handler for PUT requests
+
+        :param socket_info
+        :param request
+        """
+        if request.resource == '/cars':
+            self.do_PUT_cars(socket_info, request)
+        else:
+            self.do_PUT_invalid(socket_info, request)
+
+    def do_PUT_cars(
+            self,
+            socket_info: (socket.socket, str),
+            request: Request
+    ):
+        """
+        JSON should come in the body of the request
+
+        :param socket_info:
+        :type socket_info:(socket.socket, str)
+        :param request:
+        :raises Exception
+        :return:
+        """
+
+        if request.get_header_value('Content-Type') != 'application/json':
+            self.send_4xx_response(socket_info, request, code=400, msg='Bad Request')
+            print("[LOG] invalid Content-Type")
+            return
+
+        if not request.body:
+            self.send_4xx_response(socket_info, request, code=400, msg='Bad Request')
+            print("[LOG] empty body")
+            return
+
+        try:
+            cars_json = json.loads(request.body)
+            self._reset_cars()  # Delete previous existing cars
+            self._reset_jorneys()  # Delete previous existing journeys
+            print('[LOG] new cars and journey queues')
+            # todo should i delete the whole file if there's a single error?
+            for car in cars_json:
+                car_object = Car(ID=car['id'], seats=car['seats'])
+                self.available_cars.append(car_object)
+
+            self.check_queues()
+            self.send_2xx_response(socket_info, request, code=200, msg='OK')
+        except Exception as e:
+            print('[server exception]', type(e).__name__, e)
+            self.send_4xx_response(socket_info, request, code=400, msg='Bad Request')
+
+    def do_PUT_invalid(
+            self,
+            socket_info: (socket.socket, str),
+            request: Request
+    ):
+        """
+        Handles all the invalid PUT requests.json
+
+        Respond a 404 Not Found
+
+        :param socket_info:
+        :type socket_info: (socket.socket, str)
+        :param request:
+        """
+
+        self.send_4xx_response(socket_info, request, code=404, msg='Not Found')
+        print("[LOG] invalid resource")
+
+    """
+    Do default
+    """
+
+    def do_DEFAULT(
+            self,
+            socket_info: (socket.socket, str),
+            request: Request
+    ):
+        """
+        hace
+
+        :param socket_info:
+        :type socket_info: (socket.socket, str)
+        :param request:
+        :return:
+        """
+        self.send_4xx_response(socket_info, request, code=400, msg='Bad Request')
+
+    def get_group(self, ID):
+        """
+        Returns the group object given the ID. Searchs in both pending and journeys queues
+
+        :param ID:
+        :type ID: int
+        :return: Group
+        """
+        group = next((g for g in self.pending_groups if g.ID == ID), None)
+
+        if group is None:
+            group = next((j.group for j in self.journeys if j.group.ID == ID), None)
+
+        return group
+
+    def get_journey(self, group: Group):
+        """
+        Search a journey by group
+
+        :param group
+        :type group:Group
+        :return: Journey
+        :returns: Journey
+        """
+        return next((j for j in self.journeys if j.group == group), None)
+
+    """
+    Responses
+    """
+
+    def send_4xx_response(self, socket_info, request, code: int, msg: str):
+        """
+        Sends 4xx HTTP responses
+
+        :param socket_info:
+        :type socket_info: (socket.socket, str)
+        :param request:
+        :type request: Request
+        :param code:
+        :type code: int
+        :param msg:
+        :type msg: str
+        """
+        d = {
+            'code': code,
+            'response': msg,
+            'connection_header': 'Closed',
+            'content_type_header': 'text/html',  # todo delete content-type when not needed
+        }
+        conn, addr = socket_info
+
+        response = self._fill_response(http_body=False, http_dict=d)
+        conn.sendall(response.encode())
+        print('%s - - [%s] "%s" %s -' % (addr[0], self._fill_date_header(), request.first_line, code))
+
+    def send_2xx_response(
+            self,
+            socket_info,
+            request: Request,
+            code: int,
+            msg: str,
+            body_dict: dict = None
+    ):
+        """
+        Sends 2xx HTTP responses
+
+        :param socket_info:
+        :type socket_info: (socket.socket, str)
+        :param request:
+        :param code:
+        :param msg: str
+        :param body_dict: dict
+        """
+        conn, addr = socket_info
+        d = {
+            'code': code,
+            'response': msg,
+            'connection_header': 'Closed',
+        }
+        http_body = False
+        if body_dict:
+            d['content_type_header'] = body_dict['Content-Type']
+            http_body = True
+        response = self._fill_response(http_body=http_body, http_dict=d, body_dict=body_dict)
+        conn.sendall(response.encode())
+        print('%s - - [%s] "%s" %s -' % (addr[0], self._fill_date_header(), request.first_line, code))
 
     def create_new_journey(self, group: Group, car: Car):
         """
@@ -581,7 +655,7 @@ class Server(object):
                 assigned_groups.append(group)
 
         # Once all the groups have been checked, proceed to update the pending group list
-        [self.pending_groups.remove(x) for x in assigned_groups];
+        [self.pending_groups.remove(x) for x in assigned_groups]
 
         # todo remove trace
         verbose = True
