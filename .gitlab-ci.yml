@@ -27,11 +27,10 @@ acceptance:
     - master
   dependencies: []
   services:
-    - name: ${CI_REGISTRY_IMAGE}:latest
+#    - name: ${CI_REGISTRY_IMAGE}:latest
+    - name: python:3.7-alpine3.13
       alias: pooling
   script:
-    - echo ${CI_REGISTRY_IMAGE}
-    - echo "SI"
     - /harness --address http://pooling:9091 acceptance
 
 
