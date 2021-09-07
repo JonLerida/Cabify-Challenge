@@ -30,6 +30,8 @@ acceptance:
     - name: ${CI_REGISTRY_IMAGE}:latest
       alias: pooling
   script:
+    - echo ${CI_REGISTRY_IMAGE}
+    - echo "SI"
     - /harness --address http://pooling:9091 acceptance
 
 
