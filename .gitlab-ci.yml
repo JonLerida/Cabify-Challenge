@@ -1,5 +1,6 @@
 stages:
   - docker
+  - acceptance
 
 build_image:
   stage: docker
@@ -14,14 +15,27 @@ build_image:
       command: ["--tls=false"]
 
   before_script:
-    - echo "aqui estoy"
     - echo ${CI_JOB_TOKEN} | docker login --password-stdin -u ${CI_REGISTRY_USER} ${CI_REGISTRY}
   script:
-    - echo $(docker -v)
-    - echo $(docker images)
-    - echo $(docker ps)
     - docker build . -t ${CI_REGISTRY_IMAGE}:latest
     - docker push ${CI_REGISTRY_IMAGE}:latest
+    - echo $(docker images)
+    - echo $(docker ps)
+
+acceptance:
+  stage: acceptance
+  script:
+    - echo "Estoy aqui"
+#  image: cabify/challenge:latest
+#  stage: acceptance
+#  only:
+#    - master
+#  dependencies: []
+#  services:
+#    - name: ${CI_REGISTRY_IMAGE}:latest
+#      alias: pooling
+#  script:
+#    - /harness --address http://pooling:9091 acceptance
 
 
 
