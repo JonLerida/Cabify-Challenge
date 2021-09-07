@@ -3,8 +3,8 @@ FROM python:3.7-alpine3.13
 
 RUN mkdir /app
 COPY . /app
-COPY ../src /app
-COPY ../static /app
+COPY ./src /app
+COPY ./static /app
 WORKDIR /app
 EXPOSE 9091/tcp
 
