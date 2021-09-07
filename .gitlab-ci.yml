@@ -21,8 +21,8 @@ build_image:
     - echo "aqui estoy"
     - echo ${CI_JOB_TOKEN} | docker login --password-stdin -u ${CI_REGISTRY_USER} ${CI_REGISTRY}
   script:
-    - docker build . --tag ${CONTAINER_IMAGE}:latest
-    - docker push ${CONTAINER_IMAGE}:latest
+    - docker build . -t ${CI_REGISTRY_IMAGE}:latest
+    - docker push ${CI_REGISTRY_IMAGE}:latest
 
 accept:
   stage: acceptance
