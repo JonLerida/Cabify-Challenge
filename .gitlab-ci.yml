@@ -21,16 +21,18 @@ build_image:
     - docker push ${CI_REGISTRY_IMAGE}:latest
 
 acceptance:
-  image: cabify/challenge:latest
+#  image: cabify/challenge:latest
+  image: registry.gitlab.com/cabify-challenge/car-pooling-challenge-jonlerida
   stage: acceptance
   only:
     - master
   dependencies: []
   services:
-#    - name: ${CI_REGISTRY_IMAGE}:latest
-    - name: python:3.7-alpine3.13
+    - name: ${CI_REGISTRY_IMAGE}:latest
       alias: pooling
   script:
+    - echo $(/harness --help)
+    - echo $(ls)
     - /harness --address http://pooling:9091 acceptance
 
 
