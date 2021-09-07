@@ -21,8 +21,7 @@ build_image:
     - docker push ${CI_REGISTRY_IMAGE}:latest
 
 acceptance:
-#  image: cabify/challenge:latest
-  image: registry.gitlab.com/cabify-challenge/car-pooling-challenge-jonlerida
+  image: cabify/challenge:latest
   stage: acceptance
   only:
     - master
