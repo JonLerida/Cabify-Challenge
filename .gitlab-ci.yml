@@ -4,26 +4,23 @@ stages:
 
 build_image:
   stage: docker
-  image: docker:dind
+  image: docker:20-dind
   variables:
-    # using "docker" as the host is only possible if you alias the service below
-    DOCKER_HOST: tcp://localhost:2375
-    # could be wrong here but although Docker defaults to overlay2,
-    # Docker-in-Docker (DIND) does not according to the following GitLab doc:
-    # https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-the-overlayfs-driver
+    DOCKER_HOST: tcp://docker:2375
     DOCKER_DRIVER: overlay2
     DOCKER_TLS_CERTDIR: ""
-
   services:
-    - name: docker:dind
-    entrypoint: ["dockerd-entrypoint.sh", "--tls=false"]
-
+    - name: docker:20-dind
+      alias: docker
+      command: ["--tls=false"]
 
   before_script:
     - echo "aqui estoy"
     - echo ${CI_JOB_TOKEN} | docker login --password-stdin -u ${CI_REGISTRY_USER} ${CI_REGISTRY}
   script:
-    - export DOCKER_HOST=tcp://127.0.0.1:2375
+    - echo docker -v
+    - echo docker images
+    - echo docker ps
     - docker build . -t ${CI_REGISTRY_IMAGE}:latest
     - docker push ${CI_REGISTRY_IMAGE}:latest
 
