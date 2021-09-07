@@ -19,8 +19,6 @@ build_image:
   script:
     - docker build . -t ${CI_REGISTRY_IMAGE}:latest
     - docker push ${CI_REGISTRY_IMAGE}:latest
-    - echo $(docker images)
-    - echo $(docker ps)
 
 acceptance:
   image: cabify/challenge:latest
