@@ -21,8 +21,7 @@ build_image:
       # to an empty string, and I would call that beyond mildly infuriating.
       command: ["--tls=false"]
   before_script:
-    - echo ${REGISTRY_PASSWORD} | docker login ${REGISTRY} -u ${REGISTRY_USER} --
-      password-stdin
+    - echo ${REGISTRY_PASSWORD} | docker login ${REGISTRY} -u ${REGISTRY_USER} --password-stdin
 
   script:
     - docker build . --tag ${CONTAINER_IMAGE}:latest
