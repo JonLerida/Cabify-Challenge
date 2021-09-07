@@ -18,7 +18,7 @@ class Request(object):
         self.headers = None
         self.first_line = None
         self.arguments = None
-        self.body = None
+        self.body = ''
 
         self.parse_request(self.raw_request)
         # We don't need more cases for this challenge

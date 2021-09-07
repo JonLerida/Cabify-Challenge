@@ -463,7 +463,7 @@ class Server(object):
             self.available_cars.append(journey.car)
             self.used_cars.remove(journey.car)
         else:
-            # TODO I assumed the group wants to be deleted from the pending queue (such a cancel travel request)
+            # I assumed the group wants to be deleted from the pending queue (such a cancel travel request)
             self.pending_groups.remove(group)
         if self.verbose:
             self.print_stats()
