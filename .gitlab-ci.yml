@@ -4,7 +4,7 @@ stages:
 
 build_image:
   stage: docker
-  image: docker:dind
+  image: docker:19-dind
   variables:
     # using "docker" as the host is only possible if you alias the service below
     DOCKER_HOST: tcp://docker:2375
@@ -14,7 +14,7 @@ build_image:
     DOCKER_DRIVER: overlay2
     DOCKER_TLS_CERTDIR: ""
   services:
-    - name: docker:dind
+    - name: docker:19-dind
       alias: docker
       command: ["--tls=false"]
   before_script:
