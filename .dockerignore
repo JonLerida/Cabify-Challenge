@@ -1,11 +1,5 @@
-.git/
-.gitignore
-Dockerfile
-Makefile
-README*
 log_TODO.txt
 resumen.txt
-*.md
 __pycache__
 cars.json
 test_files
