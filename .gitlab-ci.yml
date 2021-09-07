@@ -4,13 +4,20 @@ stages:
 
 build_image:
   stage: docker
-  image: docker:latest
+  image: docker:20-dind
   variables:
     DOCKER_DRIVER: overlay2
     DOCKER_TLS_CERTDIR: ""
-    DOCKER_HOST: tcp://docker:2375/
+    DOCKER_HOST: tcp://docker:2375
   services:
-    - docker:dind
+    - name: docker:20-dind
+      alias: docker
+      # in our experience although you'd assume this would be sufficient, this did
+      # nothing to prevent connection errors without `DOCKER_TLS_CERTDIR` being set
+      # to an empty string, and I would call that beyond mildly infuriating.
+      command: ["--tls=false"]
+
+
   script:
     - echo "Estoy aquidd"
     - echo ${CI_JOB_TOKEN} | docker login --password-stdin -u ${CI_REGISTRY_USER} ${CI_REGISTRY}
