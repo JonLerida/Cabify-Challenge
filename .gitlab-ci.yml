@@ -23,19 +23,16 @@ build_image:
     - echo $(docker ps)
 
 acceptance:
+  image: cabify/challenge:latest
   stage: acceptance
+  only:
+    - master
+  dependencies: []
+  services:
+    - name: ${CI_REGISTRY_IMAGE}:latest
+      alias: pooling
   script:
-    - echo "Estoy aqui"
-#  image: cabify/challenge:latest
-#  stage: acceptance
-#  only:
-#    - master
-#  dependencies: []
-#  services:
-#    - name: ${CI_REGISTRY_IMAGE}:latest
-#      alias: pooling
-#  script:
-#    - /harness --address http://pooling:9091 acceptance
+    - /harness --address http://pooling:9091 acceptance
 
 
 
