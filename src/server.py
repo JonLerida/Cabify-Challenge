@@ -156,7 +156,7 @@ class Server(object):
 
         if http_body:
             if d['content_type_header'] == 'text/html':
-                f = open('./static/response_template.html', 'r')
+                f = open("./static/response_template.html", 'r')
                 html_string = Template(f.read())
                 f.close()
                 d['http_body'] = html_string.safe_substitute({**d, **body_dict})
@@ -207,6 +207,7 @@ class Server(object):
 
         :return:
         """
+        # server_ip = ""
         server_ip = "0.0.0.0"
         server_port = 9091  # stated in challenge description
 
@@ -222,6 +223,7 @@ class Server(object):
 
         # Backlog argument limites the number of queued requests
         s.listen()
+
         while True:
             conn, addr = s.accept()
             self.request_handler(conn, addr)
@@ -243,7 +245,6 @@ class Server(object):
             if not data:
                 return
             request = Request(data)
-
             socket_info = (conn, addr)
             if request.method == 'GET':
                 self.do_GET(socket_info, request)
@@ -270,6 +271,7 @@ class Server(object):
         :type request: Request
         :return:
         """
+
         if request.resource == '/status':
             self.do_GET_status(socket_info, request)
         else:
