@@ -6,45 +6,55 @@ This file will serve as a brief description of all the code presented.
 
 Python has been the chosen language, it provides simple but yet powerful tools to deploy APIs.
 
-Among all the public tutorials existing about how to code HTTP servers in any language, I rather chose to write my own implementation, which includes own server set up and HTTP request parser.
+Among all the public tutorials existing about how to code HTTP servers in any language, I rather chose to write my 
+own implementation, which includes own server set up and HTTP request parser.
 
-I think this is important, not only because it allows me to fully understand any point of the code, but because I reduce the number of package dependencies needed to run the application.
+I think this is important, not only because it allows me to fully understand any point of the code, but because I 
+reduce the number of package dependencies needed to run the application.
 
 ___
 ## 1. Project structure
 The project is divided in several folders, as well as some configuration, auxiliar files (for example, README.md).
 
-All the Python code is inside the `src` folder. It includes the main server (`server.py`), as well as all the class implementations (such as `car.py`).
+All the Python code is inside the `src` folder. It includes the main server (`server.py`), as well as all the class 
+implementations (such as `car.py`).
 Class implementations are extremely self explained. 
 
-Static files (for this project, http response templates) reside in the `static` folder. Both static files are used for the HTTP responses (one of them is for HTML responses, not included in this challenge).
+Static files (for this project, http response templates) reside in the `static` folder. Both static files are used for 
+the HTTP responses (one of them is for HTML responses, not included in this challenge).
 
 ___
 ## 2. Code flow
-Once the server has started, it will create a new thread which will bind a socket to the localhost IP. The port used (as stated in the challenge definition) is 9091.
+Once the server has started, it will create a new thread which will bind a socket to the localhost IP. The port used 
+(as stated in the challenge definition) is 9091.
 The `Server` instance will fill all the needed attributes (such as the `available_cars` or `served_groups` lists).
 After that, an infinite loop runs and handles all the data received in the binded socket.
 
-Since the HTTP requests message size is not predefined, we need to define a timer which allows us to keep reading data until either the message or the timeout is completed.
-This is specially important in the `PUT /cars` request, which includes all the car information in a JSON file embedded in the HTTP request body
+Since the HTTP requests message size is not predefined, we need to define a timer which allows us to keep reading data 
+until either the message or the timeout is completed.
+This is specially important in the `PUT /cars` request, which includes all the car information in a JSON file embedded 
+in the HTTP request body
 
-All the requests are piped to the `Request` class, which implements a self defined HTTP parser. It probably has way less features than the `BaseHTTPRequestHandler`, but works well for the challenge definition and allows us to reduce the dependencies.
-Once the request has been parsed, the following is self-explanatory: select the `Server` method to handle the request; act in the server side if neccessary; send a response.
-
-[comment]: <> (___)
-
-[comment]: <> (## 3. Details)
-
-[comment]: <> (### 3.1 Data structure)
-
-[comment]: <> (Since the challenge is pretty simple, I decided not to use external database, but to use class attributes for all the data stored during the server lifetime.)
-
-[comment]: <> (### 3.2 Own interpretations)
+All the requests are piped to the `Request` class, which implements a self defined HTTP parser. It probably has way 
+less features than the `BaseHTTPRequestHandler`, but works well for the challenge definition and allows us to reduce the dependencies.
+Once the request has been parsed, the following is self-explanatory: select the `Server` method to handle the request; 
+act in the server side if neccessary; send a response.
 
 ## 3. Future work
-I assumed all the communication through the API is done by a trusted client, so I avoided using authenthication or security methods.  
+I assumed all the communication through the API is done by a trusted client, so I avoided using authenthication 
+or security methods.  
 
-In other escenarios, all the requests may be checked by another thread before piping them to the `Server`. The use of cookies and personal-tokens could be a good solution.
+In other escenarios, all the requests may be checked by another thread before piping them to the `Server`. The use of 
+cookies and personal-tokens could be a good solution.
+
+## 4. Problems during the work  
+This is my very first time using Docker and Continous-Integration (CI) via GitLab, so I really needed to self explore 
+and learn both technologies/methods.    
+
+I found the coding part of the challenge quite simple, but really struggled when tried to understand all the container and tests part. 
+
+Finally (after reading all the guides, bug-assist threads and everything I could find about these topics), 
+I managed to complete all the tests successfully. 
 
 
 
