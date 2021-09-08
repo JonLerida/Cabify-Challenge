@@ -30,8 +30,9 @@ acceptance:
     - name: ${CI_REGISTRY_IMAGE}:latest
       alias: pooling
   script:
-#    - python -V
-    - /harness --address http://pooling:9091 acceptance
+    - python3 -V
+    - python3 ./src/server.py
+#    - /harness --address http://pooling:9091 acceptance
 
 
 
