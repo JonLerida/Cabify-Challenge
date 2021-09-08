@@ -1,9 +1,10 @@
-FROM python:latest
+FROM python:3.7
 
 WORKDIR /app
 COPY . .
+COPY ./src ./src
 
 EXPOSE 9091
 
-ENTRYPOINT ["python", "server.py"]
+ENTRYPOINT ["python", "./src/server.py"]
 
