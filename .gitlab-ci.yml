@@ -31,8 +31,7 @@ acceptance:
       alias: pooling
   script:
     - echo $(ls)
-    - echo $(/harness --help)
-#    - /harness -v --address http://pooling:9091 acceptance
+    - /harness --address http://pooling:9091 acceptance
 
 
 
