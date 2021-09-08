@@ -3,6 +3,10 @@ stages:
   - acceptance
 
 build_image:
+  # I had a lot of bugs/problems when using other docker dind images
+  # docker:20-dind seems to work fine. 
+  # Remember to use the command: ["--tls=false"] even when using DOCKER_TLS_CERTDIR=""
+
   stage: docker
   image: docker:20-dind
   variables:
@@ -29,11 +33,5 @@ acceptance:
   services:
     - name: ${CI_REGISTRY_IMAGE}:latest
       alias: pooling
-
   script:
     - /harness --address http://pooling:9091 acceptance
-
-
-
-
-
