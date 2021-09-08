@@ -32,7 +32,7 @@ acceptance:
   script:
     - echo $(ls)
     - echo $(cat Dockerfile)
-    - echo $python -V)
+    - echo $(python -V)
     - echo $(/harness --help)
     - cd src && echo $(ls)
     - /harness -v --address http://pooling:9091 acceptance
