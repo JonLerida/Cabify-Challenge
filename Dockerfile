@@ -5,7 +5,5 @@ COPY . .
 
 EXPOSE 9091
 
-ENTRYPOINT ["python3"]
+ENTRYPOINT ["python3", "./src/server.py"]
 
-#CMD ["python3", "-u", "./src/server.py"]
-CMD ["./src/server.py"]
