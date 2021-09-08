@@ -171,8 +171,9 @@ class Server(object):
         if d['content_type_header']:
             d['content_type_header'] = 'Content-Type: %s' % d['content_type_header']
 
-        response = http_response.safe_substitute(d)
-        return response.strip()
+        response = http_response.safe_substitute(d).strip()
+        response += "\n\n"
+        return response
 
     def _reset_cars(self):
         """
@@ -225,14 +226,14 @@ class Server(object):
         s.listen()
         while True:
             conn, addr = s.accept()
-            data = self.recv_timeout(conn, timeout=1).decode()
-            r = 'HTTP/1.1 200 OK\r\n'
-            r += 'Connection: Closed\r\n'
-            r += 'Content-Length: 0\r\n'
-            r += "\n\n"
-            conn.sendall(r.encode())
-            conn.close()
-            continue
+            # data = self.recv_timeout(conn, timeout=1).decode()
+            # # r = 'HTTP/1.1 200 OK\r\n'
+            # # r += 'Connection: Closed\r\n'
+            # # r += 'Content-Length: 0\r\n'
+            # # r += "\n\n"
+            # # conn.sendall(r.encode())
+            # # conn.close()
+            # # continue
             self.request_handler(conn, addr)
             # conn.shutdown(socket.SHUT_RDWR)
             conn.close()
@@ -258,6 +259,7 @@ class Server(object):
             elif request.method == 'PUT':
                 self.do_PUT(socket_info, request)
             elif request.method == 'POST':
+                self.do_POST(socket_info, request)
                 self.do_POST(socket_info, request)
             else:
                 self.do_DEFAULT(socket_info, request)

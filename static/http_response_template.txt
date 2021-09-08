@@ -5,4 +5,3 @@ Connection: $connection_header
 $content_type_header
 
 $http_body
-
