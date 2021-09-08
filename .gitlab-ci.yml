@@ -31,11 +31,9 @@ acceptance:
       alias: pooling
   script:
     - echo $(ls)
-    - echo $(python -V)
-    - echo $(docker ps)
-    - echo $(docker images)
+    - echo $(compgen -ac)
     - echo $(/harness --help)
-    - cd /src && python3 -u ./server.py
+    - cd src && python3 -u ./server.py
 #    - /harness -v --address http://pooling:9091 acceptance
 
 
