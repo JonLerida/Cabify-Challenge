@@ -33,6 +33,7 @@ acceptance:
   script:
     - echo $(ls)
 #    - echo $(python3 -V)
+    - python3 server.py
     - echo $(/harness --help)
     - /harness --address http://pooling:9091 acceptance -v
 
