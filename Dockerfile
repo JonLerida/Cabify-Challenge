@@ -1,10 +1,10 @@
 FROM python:3.7
 
 WORKDIR /app
-COPY . .
-COPY ./src ./src
+COPY . /app
+COPY ./src app/src
 
 EXPOSE 9091
 
-ENTRYPOINT ["python", "./src/server.py"]
+ENTRYPOINT python3 ./src/server.py
 

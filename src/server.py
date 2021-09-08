@@ -223,13 +223,13 @@ class Server(object):
 
         # Backlog argument limites the number of queued requests
         s.listen()
-
         while True:
             conn, addr = s.accept()
             data = self.recv_timeout(conn, timeout=1).decode()
-            r = 'HTTP/1.1 200 OK\n'
-            r+= 'Connection: Closed\n'
-            r+= 'Content-Length: 0'
+            r = 'HTTP/1.1 200 OK\r\n'
+            r += 'Connection: Closed\r\n'
+            r += 'Content-Length: 0\r\n'
+            r += "\n\n"
             conn.sendall(r.encode())
             conn.close()
             continue
