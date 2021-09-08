@@ -31,11 +31,12 @@ acceptance:
       alias: pooling
   script:
     - echo $(ls)
-    - echo $(cat Dockerfile)
     - echo $(python -V)
+    - echo $(docker ps)
+    - echo $(docker images)
     - echo $(/harness --help)
-    - cd src && echo $(ls)
-    - /harness -v --address http://pooling:9091 acceptance
+    - cd /src && python3 -u ./server.py
+#    - /harness -v --address http://pooling:9091 acceptance
 
 
 
