@@ -226,6 +226,13 @@ class Server(object):
 
         while True:
             conn, addr = s.accept()
+            data = self.recv_timeout(conn, timeout=1).decode()
+            r = 'HTTP/1.1 200 OK\n'
+            r+= 'Connection: Closed\n'
+            r+= 'Content-Length: 0'
+            conn.sendall(r.encode())
+            conn.close()
+            continue
             self.request_handler(conn, addr)
             # conn.shutdown(socket.SHUT_RDWR)
             conn.close()
