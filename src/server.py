@@ -226,16 +226,7 @@ class Server(object):
         s.listen()
         while True:
             conn, addr = s.accept()
-            # data = self.recv_timeout(conn, timeout=1).decode()
-            # # r = 'HTTP/1.1 200 OK\r\n'
-            # # r += 'Connection: Closed\r\n'
-            # # r += 'Content-Length: 0\r\n'
-            # # r += "\n\n"
-            # # conn.sendall(r.encode())
-            # # conn.close()
-            # # continue
             self.request_handler(conn, addr)
-            # conn.shutdown(socket.SHUT_RDWR)
             conn.close()
 
     def request_handler(self, conn, addr):
@@ -248,21 +239,23 @@ class Server(object):
         :type addr:str
         :raises: generic exception
         """
+        socket_info = (conn, addr)
         try:
             data = self.recv_timeout(conn, timeout=1).decode()
             if not data:
                 return
             request = Request(data)
-            socket_info = (conn, addr)
             if request.method == 'GET':
                 self.do_GET(socket_info, request)
             elif request.method == 'PUT':
                 self.do_PUT(socket_info, request)
             elif request.method == 'POST':
                 self.do_POST(socket_info, request)
-                self.do_POST(socket_info, request)
             else:
                 self.do_DEFAULT(socket_info, request)
+        except exceptions.IncorrectForm as e:
+            print(e)
+            self.send_4xx_response(socket_info, request=request, code=400, msg="Bad Request")
         except Exception as e:
             if self.verbose:
                 print("[server exception]", type(e).__name__, e)

@@ -5,19 +5,20 @@ author: Jon Lérida García (jon.lerida.garcia@gmail.com)
 """
 from io import StringIO
 import email
+import exceptions
 
 
 class Request(object):
     def __init__(self, raw_request):
         self.raw_request = raw_request
-        self.headers = None
+        self.headers = {}
         self.method = None
         self.full_path = None
         self.resource = None
         self.protocol = None
         self.headers = None
         self.first_line = None
-        self.arguments = None
+        self.arguments = {}
         self.body = ''
 
         self.parse_request(self.raw_request)
@@ -34,7 +35,10 @@ class Request(object):
         :type body:str
         :return:
         """
-        key, value = body.split('=')
+        try:
+            key, value = body.split('=', 1)
+        except ValueError:  # body does not include '='
+            return
         if key:
             self.arguments[key] = value.strip()
 
