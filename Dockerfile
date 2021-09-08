@@ -5,5 +5,5 @@ COPY . .
 
 EXPOSE 9091
 
-ENTRYPOINT ["python3", "./src/server.py"]
+ENTRYPOINT ["python", "server.py"]
 
